@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: posty
+    runtime: go
+    buildCommand: go build -o app ./cmd/posty
+    startCommand: ./app
+    envVars:
+      - key: PORT
+        value: 8080
+      - key: ENV
+        value: production
+      - key: CONFIG_PATH
+        value: ./config/production.yaml
+      - key: GIN_MODE
+        value: release
+    healthCheckPath: /
+    autoDeploy: true
+    plan: free
+
+# Specify the Go version explicitly
+buildConfigs:
+  - runtime: go
+    version: 1.24.x
+

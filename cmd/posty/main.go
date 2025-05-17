@@ -13,6 +13,7 @@ import (
 	"github.com/azan-boss/posty/internal/config"
 	"github.com/azan-boss/posty/internal/handler/middleware"
 	"github.com/azan-boss/posty/internal/handler/websocket"
+	"github.com/gin-contrib/cors"
 
 	// "github.com/azan-boss/posty/internal/handler/websocket"
 	"github.com/azan-boss/posty/internal/http/handler/chatroom"
@@ -33,6 +34,17 @@ func main() {
 
 	// slog.Info("server address", "address", cfg.Env)
 	router := gin.Default()
+	
+	// Add CORS middleware
+	router.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"*"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}))
+	
 	protected := router.Group("/protected")
 	protected.Use(middleware.AuthMiddleware())
 
@@ -52,8 +64,40 @@ func main() {
 	// router.GET("/ws", websocket.HandleWebSocket)
 
 	// go websocket.HandleBroadcast()
+	
+	// Determine the address to listen on, prioritizing PORT env variable for Render
+	var addr string
+	
+	// Check if PORT environment variable is set (for Render)
+	port := os.Getenv("PORT")
+	if port != "" {
+		// For Render deployment, use the PORT environment variable
+		addr = ":" + port
+	} else {
+		// For local development, use the address from config
+		// If the address already has a colon prefix, use it as is
+		if cfg.HttpServer.Address != "" {
+			if cfg.HttpServer.Address[0] == ':' {
+				addr = cfg.HttpServer.Address
+			} else {
+				// Add colon prefix if missing
+				addr = ":" + cfg.HttpServer.Address
+			}
+		} else {
+			// Default to port 8080 if no config is provided
+			addr = ":8080"
+		}
+	}
+	
+	// Remove any double colons that might have been introduced
+	if len(addr) >= 2 && addr[0] == ':' && addr[1] == ':' {
+		addr = ":" + addr[2:]
+	}
+	
+	slog.Info("server will start on", "address", addr)
+	
 	server := &http.Server{
-		Addr:    cfg.HttpServer.Address,
+		Addr:    addr,
 		Handler: router,
 	}
 
