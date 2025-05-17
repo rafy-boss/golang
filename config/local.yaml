@@ -1,0 +1,7 @@
+env: "development"
+
+http_server:
+  address: ":8080"
+
+storage:
+  database: "./storage/database.db"
